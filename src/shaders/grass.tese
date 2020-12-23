@@ -40,11 +40,11 @@ void main() {
     vec3 c0 = c - w * t1;
     vec3 c1 = c + w * t1;
 
-    fs_normal = vec4(cross(up, t1), v);
+    vec3 normal = cross(up, t1);
+
+    fs_normal = vec4(normal, v);
     
     float t = u + 0.5 * v - u * v;
-
-    //t = u;
 
     vec3 position = (1.0 - t) * c0 + t * c1;
 

@@ -51,14 +51,48 @@ bool inBounds(float value, float bounds) {
 
 void main() {
 	// Reset the number of blades to 0
-	if (gl_GlobalInvocationID.x == 0) {
+    uint idx = gl_GlobalInvocationID.x;
+	if (idx == 0) {
 		numBlades.vertexCount = 0;
 	}
 	barrier(); // Wait till all threads reach this point
 
-    // TODO: Apply forces on every blade and update the vertices in the buffer
+    Blade blade = blades[idx];
+    vec3 v0 = blade.v0.xyz;
+    vec3 v1 = blade.v1.xyz;
+    vec3 v2 = blade.v2.xyz;
+    vec3 up = blade.up.xyz;
+
+    float costheta = blade.v0.w;
+    vec3 bitangent = vec3(cos(costheta), 0, sin(costheta));
+    vec3 normal = cross(up, bitangent);
+    vec3 iv2 = v0 + up;
+    float stiffness = blade.up.w;
+    float height = blade.v1.w;
+
+    // Apply forces on every blade and update the vertices in the buffer
+    vec3 wind = vec3(0.707, 0, 0.707) * 2.0 * cos(totalTime);
+    float fd = 1.0 - abs(dot(normalize(wind), normalize(v2 - v0)));
+    float fr = dot((v2 - v0), up) / height;
+    //wind *= fd * fr;
+
+    vec3 gE = vec3(0, -1, 0) * 2.0;
+    vec3 gF = 0.25 * length(gE) * normal;
+    vec3 gravity = gE + gF;
+    //gravity = vec3(0);
+    vec3 recovery = (iv2 - v2) * stiffness;
+
+    vec3 tv2 = v2 + (gravity + recovery + wind) * deltaTime;
+    tv2 = tv2 - up * min(up * (tv2 - v0), 0.0);
+    tv2 = normalize(tv2 - v0) * height + v0;
+    float lproj = length(tv2 - v0 - dot((tv2 - v0), up) * up);
+    vec3 tv1 = v0 + height * up * max(1.0 - lproj / height, 0.05 * max(lproj / height, 1.0));
+
+    blades[idx].v1.xyz = tv1;
+    blades[idx].v2.xyz = tv2;
+
     uint atomic = atomicAdd(numBlades.vertexCount, 1);
-	culledBlades[atomic] = blades[gl_GlobalInvocationID.x];
+	culledBlades[atomic] = blades[idx];
 
 	// TODO: Cull blades that are too far away or not in the camera frustum and write them
 	// to the culled blades buffer
