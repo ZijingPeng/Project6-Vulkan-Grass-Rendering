@@ -28,11 +28,16 @@ void main() {
     tese_v2[gl_InvocationID] = tesc_v2[gl_InvocationID];
     tese_up[gl_InvocationID] = tesc_up[gl_InvocationID];
 
-	// TODO: Set level of tesselation
+    vec3 viewPos = (inverse(camera.view) * vec4(0, 0, 0, 1)).xyz;
+    vec3 viewDir = tesc_v0[gl_InvocationID].xyz - viewPos;
+    const float MAX_DISTANCE = 20.0;
+    int level = int(mix(1.0, 5.0, max(0, 1.0 - length(viewDir) / MAX_DISTANCE)));
+
+	//  Set level of tesselation
     gl_TessLevelInner[0] = 1;
-    gl_TessLevelInner[1] = 4;
-    gl_TessLevelOuter[0] = 4;
+    gl_TessLevelInner[1] = level;
+    gl_TessLevelOuter[0] = level;
     gl_TessLevelOuter[1] = 1;
-    gl_TessLevelOuter[2] = 4;
+    gl_TessLevelOuter[2] = level;
     gl_TessLevelOuter[3] = 1;
 }
